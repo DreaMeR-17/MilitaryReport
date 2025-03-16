@@ -8,46 +8,47 @@ namespace MilitaryReport
     {
         private static void Main()
         {
-            ProgramRunner.Run();
+            var databaseHandler = new DatabaseHandler();
+            databaseHandler.Run();
         }
     }
 
-    class ProgramRunner
+    class DatabaseHandler
     {
-        public static void Run()
-        {
-            Database database = new Database();
+        private const string ShowRankCommand = "1";
+        private const string ShowWeaponCommand = "2";
+        private const string ExitCommand = "3";
 
+        private readonly Database _database;
+
+        public DatabaseHandler()
+        {
+            _database = new Database();
+        }
+
+        public void Run()
+        {
             Console.WriteLine("Полный список солдат:");
-            database.ShowAllSoldiers();
+            _database.ShowAllSoldiers();
 
             bool isRunning = true;
 
             while (isRunning)
             {
-                Console.WriteLine("\nВыберите действие:");
-                Console.WriteLine("1 - Показать Имя и Звание");
-                Console.WriteLine("2 - Показать Имя и Вооружение");
-                Console.WriteLine("3 - Выход");
-
-                Console.Write("Введите команду: ");
+                ShowMenu();
                 string command = Console.ReadLine();
 
                 switch (command)
                 {
-                    case "1":
-                        Console.Clear();
-                        Console.WriteLine("Отчёт (Имя и Звание):");
-                        database.ShowReport(soldier => (soldier.Name, soldier.Rank), "Звание");
+                    case ShowRankCommand:
+                        ShowReport("Звание", soldier => soldier.Rank);
                         break;
 
-                    case "2":
-                        Console.Clear();
-                        Console.WriteLine("Отчёт (Имя и Вооружение):");
-                        database.ShowReport(soldier => (soldier.Name, soldier.Weapon), "Вооружение");
+                    case ShowWeaponCommand:
+                        ShowReport("Вооружение", soldier => soldier.Weapon);
                         break;
 
-                    case "3":
+                    case ExitCommand:
                         isRunning = false;
                         break;
 
@@ -57,6 +58,24 @@ namespace MilitaryReport
                         break;
                 }
             }
+        }
+
+        private void ShowMenu()
+        {
+            Console.WriteLine("\nВыберите действие:");
+            Console.WriteLine($"{ShowRankCommand} - Показать Имя и Звание");
+            Console.WriteLine($"{ShowWeaponCommand} - Показать Имя и Вооружение");
+            Console.WriteLine($"{ExitCommand} - Выход");
+            Console.Write("Введите команду: ");
+        }
+
+        private void ShowReport(string parameterName, Func<Soldier, string> selector)
+        {
+            Console.Clear();
+            Console.WriteLine($"Отчёт ({parameterName}):");
+
+            var report = _database.GetReport(selector);
+            report.ForEach(Console.WriteLine);
         }
     }
 
@@ -71,32 +90,26 @@ namespace MilitaryReport
 
         public void ShowAllSoldiers()
         {
-            foreach (var soldier in _soldiers)
-            {
-                Console.WriteLine($"Имя: {soldier.Name}, Звание: {soldier.Rank}, Вооружение: {soldier.Weapon}, Срок службы: {soldier.ServiceTerm} мес.");
-            }
+            _soldiers.ForEach(soldier => Console.WriteLine(
+                $"Имя: {soldier.Name}, Звание: {soldier.Rank}, Вооружение: {soldier.Weapon}, Срок службы: {soldier.ServiceTerm} мес."));
         }
 
-        public void ShowReport(Func<Soldier, (string Name, string Value)> selector, string parameterName)
+        public List<string> GetReport(Func<Soldier, string> selector)
         {
-            var report = _soldiers.Select(selector);
-
-            foreach (var item in report)
-            {
-                Console.WriteLine($"Имя: {item.Name}, {parameterName}: {item.Value}");
-            }
+            return _soldiers
+                .Select(soldier => $"Имя: {soldier.Name}, {selector(soldier)}")
+                .ToList();
         }
 
-        private static List<Soldier> GenerateSoldiers()
+        private List<Soldier> GenerateSoldiers()
         {
-            return new List<Soldier>
-            {
-                new Soldier("Иван Петров", "Автомат АК-74", "Рядовой", 12),
-                new Soldier("Алексей Смирнов", "Снайперская винтовка СВД", "Сержант", 24),
-                new Soldier("Дмитрий Козлов", "Пистолет Макарова", "Лейтенант", 36),
-                new Soldier("Сергей Васильев", "Пулемёт ПКМ", "Капитан", 48),
-                new Soldier("Николай Сидоров", "Гранатомёт РПГ-7", "Майор", 60)
-            };
+            string[] names = { "Иван Петров", "Алексей Смирнов", "Дмитрий Козлов", "Сергей Васильев", "Николай Сидоров" };
+            string[] weapons = { "Автомат АК-74", "Снайперская винтовка СВД", "Пистолет Макарова", "Пулемёт ПКМ", "Гранатомёт РПГ-7" };
+            string[] ranks = { "Рядовой", "Сержант", "Лейтенант", "Капитан", "Майор" };
+
+            return names
+                .Select((name, index) => new Soldier(name, weapons[index], ranks[index], (index + 1) * 12))
+                .ToList();
         }
     }
 
@@ -116,5 +129,3 @@ namespace MilitaryReport
         public int ServiceTerm { get; }
     }
 }
-
-
